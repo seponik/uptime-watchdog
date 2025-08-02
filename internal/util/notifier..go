@@ -11,26 +11,26 @@ import (
 	"github.com/seponik/uptime-watchdog/internal/checker"
 )
 
+// ProcessResults logs each URL check result and sends an alert for errors or bad status codes.
 func ProcessResults(results []checker.URLCheckResult, webhookURL string) {
 	printResults(results)
 	for _, result := range results {
-
-		if result.Err != nil || result.StatusCode >= 300 {
+		if result.Error != nil || result.StatusCode >= 300 {
 			err := sendAlert(webhookURL, result.URL)
 			if err != nil {
 				log.Printf("Failed to send alert for %s: %v", result.URL, err)
 			}
 		}
-
 	}
 }
 
+// printResults logs each URL's check result: UP if OK, WARN for bad status, DOWN if error.
 func printResults(results []checker.URLCheckResult) {
 	for _, result := range results {
-		if result.Err != nil {
+		if result.Error != nil {
 			log.Printf("[DOWN] %s - error: %v (%.2fs)",
 				result.URL,
-				result.Err,
+				result.Error,
 				result.Delay.Seconds(),
 			)
 
@@ -55,6 +55,8 @@ func printResults(results []checker.URLCheckResult) {
 	}
 }
 
+// sendAlert sends a alert to the given slack webhook if a URL is down.
+// Returns an error if something went wrong.
 func sendAlert(webhookURL, url string) error {
 	timestamp := time.Now().UTC().Format("2006-01-02 15:04:05")
 	alertMessage := fmt.Sprintf("🚨 ALERT: %s is DOWN as of %s UTC.", url, timestamp)
