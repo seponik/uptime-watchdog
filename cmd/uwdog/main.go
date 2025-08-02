@@ -25,7 +25,7 @@ func main() {
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 
-		util.PrintResults(results)
+		util.ProcessResults(results, config.WebhookURL)
 
 		time.Sleep(time.Duration(config.Interval) * time.Second)
 	}

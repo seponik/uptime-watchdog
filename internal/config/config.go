@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	Interval int      `yaml:"interval"`
-	URLs     []string `yaml:"urls"`
+	Interval   int      `yaml:"interval"`
+	WebhookURL string   `yaml:"webhook_url"`
+	URLs       []string `yaml:"urls"`
 }
 
 func Load() (*Config, error) {
