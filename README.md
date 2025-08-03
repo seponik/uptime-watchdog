@@ -24,10 +24,9 @@ A **lightweight**, **concurrent**, and **reliable** uptime monitoring tool built
 
 ### Installation
 
-```bash
-# Download the latest release
-TODO
-```
+1. Go to the [Releases](https://github.com/seponik/uptime-watchdog/releases) section of this repository.
+
+2. Download the latest release for your operating system.
 
 ### Configuration
 
@@ -90,11 +89,8 @@ endpoints:
 ## 🐳 Docker Support
 
 ```bash
-# Pull the image
-docker pull seponik/TODO
-
-# Run with mounted config
-docker run -v $(pwd)/config.yaml:/uwdog/config.yaml seponik/TODO
+# Pull and run the latest version
+docker run -v $(pwd)/config.yaml:/uwdog/config.yaml seponik/uwdog:latest
 ```
 
 ### Docker Compose
@@ -102,8 +98,8 @@ docker run -v $(pwd)/config.yaml:/uwdog/config.yaml seponik/TODO
 ```yaml
 version: '3.8'
 services:
-  uptime-guardian:
-    image: seponik/TODO
+  uptime-watchdog:
+    image: seponik/uwdog:latest
     volumes:
       - ./config.yaml:/uwdog/config.yaml
     restart: unless-stopped
@@ -111,12 +107,33 @@ services:
 
 ## 🏗️ Building from Source
 
+Clone the repository and build for your platform:
+
 ```bash
 git clone https://github.com/seponik/uptime-watchdog.git
-
 cd uptime-watchdog
+make build OS=linux ARCH=amd64
+```
 
-make build
+### Supported Platforms
+
+| OS | Architecture |
+|---|---|
+| `linux` | `amd64`, `arm64` |
+| `windows` | `amd64`, `arm64` |
+| `darwin` | `amd64`, `arm64` |
+
+### Examples
+
+```bash
+# Linux x64
+make build OS=linux ARCH=amd64
+
+# macOS Apple Silicon
+make build OS=darwin ARCH=arm64
+
+# Windows x64
+make build OS=windows ARCH=amd64
 ```
 
 ## 🤝 Contributing
@@ -125,4 +142,3 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
