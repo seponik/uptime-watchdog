@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/seponik/uptime-watchdog/internal/config"
 )
 
 func newTestServer(status int, delay time.Duration) *httptest.Server {
@@ -14,31 +16,34 @@ func newTestServer(status int, delay time.Duration) *httptest.Server {
 	}))
 }
 
-func TestCheckAll(t *testing.T) {
+func TestChecker(t *testing.T) {
 	upSrv := newTestServer(200, 50*time.Millisecond)
 	defer upSrv.Close()
 
-	warnSrv := newTestServer(301, 20*time.Millisecond)
-	defer warnSrv.Close()
+	downSrv := newTestServer(500, 3*time.Second)
+	defer downSrv.Close()
 
-	downURL := "http://127.0.0.1:65500"
-
-	urls := []string{upSrv.URL, warnSrv.URL, downURL}
-	results := CheckAll(urls)
-
-	if len(results) != 3 {
-		t.Fatalf("expected 3 results, got %d", len(results))
+	endpointUp := config.Endpoint{
+		URL:     upSrv.URL,
+		Timeout: config.Duration(2 * time.Second),
 	}
 
-	if results[0].StatusCode != 200 || results[0].Error != nil {
-		t.Errorf("expected UP result, got %+v", results[0])
+	endpointDown := config.Endpoint{
+		URL:     downSrv.URL,
+		Timeout: config.Duration(2 * time.Second),
 	}
 
-	if results[1].StatusCode != 301 || results[1].Error != nil {
-		t.Errorf("expected WARN result, got %+v", results[1])
+	checkerUp := NewChecker(endpointUp)
+	resultUp := checkerUp.Check()
+
+	checkerDown := NewChecker(endpointDown)
+	resultDown := checkerDown.Check()
+
+	if resultUp.StatusCode != 200 || resultUp.Error != nil {
+		t.Errorf("expected UP result, got %+v", resultUp)
 	}
 
-	if results[2].Error == nil {
-		t.Errorf("expected error for DOWN, got %+v", results[2])
+	if resultDown.Error == nil {
+		t.Errorf("expected DOWN result, got %+v", resultDown)
 	}
 }

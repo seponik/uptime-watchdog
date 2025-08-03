@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/seponik/uptime-watchdog/internal/config"
 )
 
 func newWebhookServer() *httptest.Server {
@@ -28,7 +30,12 @@ func TestSendAlert(t *testing.T) {
 	server := newWebhookServer()
 	defer server.Close()
 
-	err := sendAlert(server.URL, "http://test.org")
+	endpoint := config.Endpoint{
+		Name: "Test Endpoint",
+		URL:  "http://test.org",
+	}
+
+	err := sendAlert(server.URL, endpoint)
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}

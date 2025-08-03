@@ -1,68 +1,75 @@
 package checker
 
 import (
+	"fmt"
 	"net/http"
-	"sync"
+	"strings"
 	"time"
+
+	"github.com/seponik/uptime-watchdog/internal/config"
 )
 
 type URLCheckResult struct {
-	URL        string        // The URL that was checked.
-	StatusCode int           // The HTTP status code received from the server.
-	Delay      time.Duration // The time it took to get a response.
-	Error      error         // Any error that occurred during the check.
+	Endpoint   config.Endpoint // The endpoint that was checked.
+	StatusCode int             // The HTTP status code received from the server.
+	Delay      time.Duration   // The time it took to get a response.
+	Error      error           // Any error that occurred during the check.
 }
 
-// CheckURL sends a GET request to the given URL to check its status.
-// The default timeout is 5 seconds.
-// Returns a URLCheckResult, which includes the URL, status code, delay, and an error if something went wrong.
-func CheckURL(url string) URLCheckResult {
-	client := http.Client{
-		Timeout: 5 * time.Second,
-	}
+type Checker struct {
+	endpoint config.Endpoint // The endpoint to check.
+	client   *http.Client    // HTTP client used to send requests.
+}
 
+// NewChecker creates a new Checker instance for the given URL endpoint.
+func NewChecker(endpoint config.Endpoint) *Checker {
+	return &Checker{
+		endpoint: endpoint,
+		client: &http.Client{
+			Timeout: time.Duration(endpoint.Timeout),
+		},
+	}
+}
+
+// CheckURL sends a GET request to the endpoint's URL and returns the result.
+// Returns a URLCheckResult, which includes the Endpoint, status code, delay, and an error if something went wrong.
+func (c *Checker) Check() URLCheckResult {
 	start := time.Now()
-	response, err := client.Get(url)
+	response, err := c.client.Get(c.endpoint.URL)
 	delay := time.Since(start)
 
 	if err != nil {
+		err = parseError(err, c.client.Timeout)
+
 		return URLCheckResult{
-			URL:   url,
-			Delay: delay,
-			Error: err,
+			Endpoint: c.endpoint,
+			Delay:    delay,
+			Error:    err,
 		}
 	}
 	defer response.Body.Close()
 
 	return URLCheckResult{
-		URL:        url,
+		Endpoint:   c.endpoint,
 		StatusCode: response.StatusCode,
 		Delay:      delay,
 	}
-
 }
 
-// CheckAll concurrently checks the provided URLs with CheckURL function.
-// Returns a slice of URLCheckResult containing the results for each URL.
-func CheckAll(urls []string) []URLCheckResult {
-	if len(urls) == 0 {
-		return nil
+func parseError(err error, timeout time.Duration) error {
+	errStr := err.Error()
+
+	if strings.Contains(errStr, "deadline exceeded") {
+		return fmt.Errorf("request timed out after %v", timeout)
 	}
 
-	results := make([]URLCheckResult, len(urls))
-	var wg sync.WaitGroup
-
-	for i, url := range urls {
-		wg.Add(1)
-
-		go func(i int, url string) {
-			defer wg.Done()
-
-			results[i] = CheckURL(url)
-		}(i, url)
+	if strings.Contains(errStr, "no such host") {
+		return fmt.Errorf("host not found")
 	}
 
-	wg.Wait()
+	if strings.Contains(errStr, "connection refused") {
+		return fmt.Errorf("connection refused by server")
+	}
 
-	return results
+	return err
 }

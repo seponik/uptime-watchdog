@@ -1,6 +1,19 @@
-interval: 10
-webhook_url: https://hooks.slack.com/services/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
+webhook_url: https://hooks.slack.com/services/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
 
-urls:
-  - https://me.seponik.dev
-  - https://fakeurl.sepo.live
+endpoints:
+  - name: Portfolio
+    url: https://me.seponik.dev
+    timeout: 5s
+    interval: 1h
+
+  - name: Example API
+    url: https://api.example.com/health
+    timeout: 5s
+    interval: 30m
+    expected_status: 200
+    
+  - name: Example Website
+    url: https://www.example.com
+    timeout: 10s
+    interval: 1h
+    expected_status: 200

@@ -9,57 +9,51 @@ import (
 	"time"
 
 	"github.com/seponik/uptime-watchdog/internal/checker"
+	"github.com/seponik/uptime-watchdog/internal/config"
 )
 
-// ProcessResults logs each URL check result and sends an alert for errors or bad status codes.
-func ProcessResults(results []checker.URLCheckResult, webhookURL string) {
-	printResults(results)
-	for _, result := range results {
-		if result.Error != nil || result.StatusCode >= 300 {
-			err := sendAlert(webhookURL, result.URL)
-			if err != nil {
-				log.Printf("Failed to send alert for %s: %v", result.URL, err)
-			}
+type Notifier struct {
+	webhookURL string // Slack webhook URL for notifications
+}
+
+// NewNotifier creates a new Notifier instance with the given webhook URL.
+func NewNotifier(webhookURL string) Notifier {
+	return Notifier{webhookURL: webhookURL}
+}
+
+// ProcessResult processes the URL check result and sends an alert if necessary.
+func (n *Notifier) ProcessResult(result checker.URLCheckResult) {
+	printResult(result)
+	if result.Error != nil || result.StatusCode != result.Endpoint.ExpectedStatus {
+		if err := sendAlert(n.webhookURL, result.Endpoint); err != nil {
+			log.Printf("[ERR]  Failed to send alert: %v", err)
 		}
 	}
 }
 
-// printResults logs each URL's check result: UP if OK, WARN for bad status, DOWN if error.
-func printResults(results []checker.URLCheckResult) {
-	for _, result := range results {
-		if result.Error != nil {
-			log.Printf("[DOWN] %s - error: %v (%.2fs)",
-				result.URL,
-				result.Error,
-				result.Delay.Seconds(),
-			)
-
-			continue
-		}
-
-		if result.StatusCode >= 300 {
-			log.Printf("[WARN] %s - status: %d (%.2fs)",
-				result.URL,
-				result.StatusCode,
-				result.Delay.Seconds(),
-			)
-
-			continue
-		}
-
-		log.Printf("[UP]   %s - status: %d (%.2fs)",
-			result.URL,
-			result.StatusCode,
-			result.Delay.Seconds(),
+// printResults logs each Endpoints's check result: UP if OK, DOWN if ERROR or Unexpected Status code.
+func printResult(result checker.URLCheckResult) {
+	if result.Error != nil || result.StatusCode != result.Endpoint.ExpectedStatus {
+		log.Printf("[DOWN] %-20s error: %-20v",
+			result.Endpoint.Name,
+			result.Error,
 		)
+
+		return
 	}
+
+	log.Printf("[UP]   %-20s status: %-4d (%.2vms)",
+		result.Endpoint.Name,
+		result.StatusCode,
+		result.Delay.Milliseconds(),
+	)
 }
 
 // sendAlert sends a alert to the given slack webhook if a URL is down.
 // Returns an error if something went wrong.
-func sendAlert(webhookURL, url string) error {
+func sendAlert(webhookURL string, endpoint config.Endpoint) error {
 	timestamp := time.Now().UTC().Format("2006-01-02 15:04:05")
-	alertMessage := fmt.Sprintf("🚨 ALERT: %s is DOWN as of %s UTC.", url, timestamp)
+	alertMessage := fmt.Sprintf("🚨 ALERT: %s is DOWN as of %s UTC.", endpoint.Name, timestamp)
 
 	payload := map[string]string{"text": alertMessage}
 
