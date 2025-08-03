@@ -65,6 +65,9 @@ endpoints:
 
 <img src="assets/output.png">
 
+<img src="assets/slack.png">
+
+
 
 ## 🔧 Configuration Options
 
